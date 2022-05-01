@@ -1,0 +1,14 @@
+version: "2.0"
+services:
+ ost-testing:
+    image: erenika/ostesting:latest
+    volumes:
+      - ${HOME}/logs:/var/logs
+      - /app:/app
+    privileged: true
+    network_mode: host
+    stdin_open: true
+    tty: true 
+    command: su  -c "bash"
+    container_name: ostesting
+

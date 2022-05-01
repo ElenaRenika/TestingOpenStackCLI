@@ -1,0 +1,48 @@
+variables:
+  GIT_STRATEGY: clone
+  GIT_SUBMODULE_STRATEGY: recursive
+  GIT_DEPTH: 1
+  IMAGE: erenika/ostesting
+  DOCKER_REGISTRY: registry-1.docker.io
+  TAG: latest
+
+
+stages:
+- check
+- build
+- test
+
+scriptscheck:
+  stage: check
+  image:
+    name: alpine/flake8:3.5.0
+    entrypoint: ['/bin/sh', '-c']
+  script:
+    - pwd
+    - flake8 ./src
+
+build-and-deploy:
+  stage: build 
+  before_script:
+    - which git || (apt-get update && apt-get install git)
+    - git submodule sync --recursive
+    - git submodule update  --remote --recursive
+    - docker login --username=${USER_LOGIN} --password=${USER_PASSWORD} ${DOCKER_REGISTRY}
+  script:
+    - echo "Building ${IMAGE}:${TAG}..."
+    - docker build -t ${IMAGE}:${TAG} .
+    - echo "Deploying ${IMAGE}:${TAG}..."
+    - docker push ${IMAGE}:${TAG}
+  after_script:
+    - docker rmi ${IMAGE}:${TAG} || echo "docker image was not deleted"
+    - docker logout ${DOCKER_REGISTRY}
+  allow_failure: false
+
+testing:
+  stage: test
+  image: ${IMAGE}:${TAG}
+  script:
+    - python3 ost --set1 --set2
+  artifacts:
+    paths: [reports/*]
+    when: always
